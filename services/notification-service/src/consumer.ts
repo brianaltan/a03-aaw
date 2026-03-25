@@ -1,11 +1,24 @@
 import amqplib from "amqplib";
 import { db } from "./db";
 import { notifications } from "./db/schema";
+import { wsClients } from "./index";
 
 const RABBITMQ_URL =
   process.env.RABBITMQ_URL || "amqp://guest:guest@localhost:5672";
 const EXCHANGE_NAME = "suilens.events";
 const QUEUE_NAME = "notification-service.order-events";
+
+function broadcastToClients(data: Record<string, any>) {
+  const message = JSON.stringify(data);
+  for (const client of wsClients) {
+    try {
+      client.send(message);
+    } catch (err) {
+      console.error("Failed to send WS message:", err);
+      wsClients.delete(client);
+    }
+  }
+}
 
 export async function startConsumer() {
   let retries = 0;
@@ -42,6 +55,18 @@ export async function startConsumer() {
             });
 
             console.log(`Notification recorded for order ${orderId}`);
+
+            // Broadcast to all connected WebSocket clients
+            broadcastToClients({
+              event: "order.placed",
+              timestamp: event.timestamp,
+              data: {
+                orderId,
+                customerName,
+                customerEmail,
+                lensName,
+              },
+            });
           }
 
           channel.ack(msg);

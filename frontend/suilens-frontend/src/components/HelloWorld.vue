@@ -1,7 +1,18 @@
 <template>
   <v-container class="py-8" max-width="800">
     <v-card>
-      <v-card-title>Live Order Notifications</v-card-title>
+      <v-card-title class="d-flex align-center">
+        Live Order Notifications
+        <v-spacer></v-spacer>
+        <v-chip
+          :color="connected ? 'success' : 'error'"
+          size="small"
+          variant="flat"
+        >
+          <v-icon start size="x-small">{{ connected ? 'mdi-wifi' : 'mdi-wifi-off' }}</v-icon>
+          {{ connected ? 'Connected' : 'Disconnected' }}
+        </v-chip>
+      </v-card-title>
       <v-divider></v-divider>
 
       <v-card-text class="py-6" style="min-height: 500px">
@@ -24,8 +35,12 @@
             "
           >
             <p class="text-sm ma-0">
-              Order placed for {{ notification.data.lensName }} by
-              {{ notification.data.customerName }}
+              Order placed for <strong>{{ notification.data.lensName }}</strong> by
+              <strong>{{ notification.data.customerName }}</strong>
+              ({{ notification.data.customerEmail }})
+            </p>
+            <p class="text-xs text-grey-darken-1 mt-1">
+              Order ID: {{ notification.data.orderId }}
             </p>
             <p class="text-xs text-grey-darken-1 mt-1">
               {{ formatTime(notification.timestamp) }}
@@ -46,9 +61,44 @@
 </template>
 
 <script setup>
-import { ref } from "vue";
+import { ref, onMounted, onUnmounted } from "vue";
+
+const WS_URL =
+  import.meta.env.VITE_NOTIFICATION_WS || "ws://localhost:3003/ws";
 
 const notifications = ref([]);
+const connected = ref(false);
+let ws = null;
+let reconnectTimer = null;
+
+function connect() {
+  ws = new WebSocket(WS_URL);
+
+  ws.onopen = () => {
+    connected.value = true;
+    console.log("WebSocket connected to notification service");
+  };
+
+  ws.onmessage = (event) => {
+    try {
+      const data = JSON.parse(event.data);
+      notifications.value.unshift(data);
+    } catch (e) {
+      console.error("Failed to parse WebSocket message:", e);
+    }
+  };
+
+  ws.onclose = () => {
+    connected.value = false;
+    console.log("WebSocket disconnected, reconnecting in 3s...");
+    reconnectTimer = setTimeout(connect, 3000);
+  };
+
+  ws.onerror = (err) => {
+    console.error("WebSocket error:", err);
+    ws.close();
+  };
+}
 
 function formatTime(timestamp) {
   const date = new Date(timestamp);
@@ -62,4 +112,13 @@ function formatTime(timestamp) {
 function clearNotifications() {
   notifications.value = [];
 }
+
+onMounted(() => {
+  connect();
+});
+
+onUnmounted(() => {
+  if (reconnectTimer) clearTimeout(reconnectTimer);
+  if (ws) ws.close();
+});
 </script>
