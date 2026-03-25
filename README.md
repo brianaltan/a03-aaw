@@ -149,3 +149,41 @@ kubectl get pods -n suilens-2306152166 -o wide
 - `brianaltan/suilens-order-service:latest`
 - `brianaltan/suilens-notification-service:latest`
 - `brianaltan/suilens-frontend:latest`
+
+## Setup and Deploy Screenshots
+
+![Step 1](./images/step1.png)
+![Step 2](./images/step2.png)
+![Step 3](./images/step3.png)
+![Step 4](./images/step4.png)
+![Step 5](./images/step5.png)
+![Smoke Test](./images/smoketest.png)
+
+---
+
+### WebSocket Notification Demo
+
+**Before POST**
+![Before](./images/before.png)
+
+**After POST**
+![After](./images/after.png)
+
+---
+
+### OpenAPI Documentation
+
+**Catalog Service Swagger**
+![Catalog Swagger](./images/swagger_1.png)
+
+**Order Service Swagger**
+![Order Swagger](./images/swagger_2.png)
+
+**Notification Service Swagger**
+![Notification Swagger](./images/swagger_3.png)
+
+---
+
+### kubectl get pods -o wide
+
+![Final Pods](./images/final.png)
